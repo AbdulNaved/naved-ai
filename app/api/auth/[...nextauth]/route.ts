@@ -1,8 +1,8 @@
-import NextAuth, { NextAuthOptions, RequestInternal } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { User } from "../../../models/userModel"; // Adjust path as necessary
-import { connectToDatabase } from "../../../lib/utils";
-import { hash, compare } from "bcryptjs";
+import NextAuth, { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { User } from '../../../models/userModel'; // Adjust path as necessary
+import { connectToDatabase } from '../../../lib/utils';
+import { hash, compare } from 'bcryptjs';
 
 // Define types for credentials object
 type Credentials = {
@@ -15,17 +15,17 @@ type Credentials = {
 const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        name: { label: "Name", type: "text" }, // Name field for signup
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+        name: { label: 'Name', type: 'text' }, // Name field for signup
       },
       authorize: async (credentials: Credentials | undefined) => {
         if (!credentials || !credentials.email || !credentials.password) {
-          throw new Error("Missing email or password");
+          throw new Error('Missing email or password');
         }
-        
+
         const { email, password, name } = credentials;
 
         await connectToDatabase();
@@ -49,7 +49,7 @@ const authOptions: NextAuthOptions = {
         // If the user exists, compare passwords
         const isMatch = await compare(password, existingUser.password);
         if (!isMatch) {
-          throw new Error("Invalid credentials");
+          throw new Error('Invalid credentials');
         }
 
         return { id: existingUser._id, email: existingUser.email, name: existingUser.name };
@@ -57,8 +57,8 @@ const authOptions: NextAuthOptions = {
     }),
   ],
   pages: {
-    signIn: "/login",
-    error: "/auth/error", // Redirect to error page
+    signIn: '/login',
+    error: '/auth/error', // Redirect to error page
   },
   callbacks: {
     async signIn({ user, account }: { user: any; account: any }) {
@@ -69,7 +69,5 @@ const authOptions: NextAuthOptions = {
   debug: true,
 };
 
-// Wrap in a function and export as default for Next.js routing
-const handler = async (req: RequestInternal, res: any) => await NextAuth(req, res, authOptions);
-
-export { handler as GET, handler as POST };
+// Export default handler with authOptions as configuration
+export default NextAuth(authOptions);
