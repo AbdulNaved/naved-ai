@@ -1,19 +1,31 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions, RequestInternal } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { User } from "../../../models/userModel"; // Adjust path as necessary
 import { connectToDatabase } from "../../../lib/utils";
-import { hash, compare } from "bcryptjs"; // You may need this for hashing passwords
+import { hash, compare } from "bcryptjs";
 
-const authHandler = NextAuth({
+// Define types for credentials object
+type Credentials = {
+  email: string;
+  password: string;
+  name?: string;
+};
+
+// Define authOptions using NextAuthOptions for better typing
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        name: { label: "Name", type: "text" }, // Add name field for signup
+        name: { label: "Name", type: "text" }, // Name field for signup
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials: Credentials | undefined) => {
+        if (!credentials || !credentials.email || !credentials.password) {
+          throw new Error("Missing email or password");
+        }
+        
         const { email, password, name } = credentials;
 
         await connectToDatabase();
@@ -49,299 +61,15 @@ const authHandler = NextAuth({
     error: "/auth/error", // Redirect to error page
   },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account }: { user: any; account: any }) {
       // Additional logic on sign in, if necessary
       return true;
     },
   },
   debug: true,
-});
+};
 
-export default authHandler; // Make sure this is the default export
+// Wrap in a function and export as default for Next.js routing
+const handler = async (req: RequestInternal, res: any) => await NextAuth(req, res, authOptions);
 
-
-// import NextAuth from "next-auth";
-// import GoogleProvider from "next-auth/providers/google";
-// import CredentialsProvider from "next-auth/providers/credentials";
-// import { User } from "../../../models/userModel";
-// import { compare } from "bcryptjs";
-// import { connectToDatabase } from "../../../lib/utils";
-
-// // Custom error class if needed
-// class CredentialsSigninError extends Error {
-//   constructor(message: string, cause?: any) {
-//     super(message);
-//     this.name = "CredentialsSigninError";
-//     this.cause = cause;
-//   }
-// }
-
-// // Create an auth handler function to export as POST
-// const authHandler = NextAuth({
-//   providers: [
-//     GoogleProvider({
-//       clientId: process.env.GOOGLE_CLIENT_ID!,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-//     }),
-//     CredentialsProvider({
-//       name: "Credentials",
-//       credentials: {
-//         email: { label: "Email", type: "email" },
-//         password: { label: "Password", type: "password" },
-//       },
-//       authorize: async (credentials) => {
-//         const email = credentials?.email as string | undefined;
-//         const password = credentials?.password as string | undefined;
-
-//         if (!email || !password) {
-//           throw new CredentialsSigninError("Please provide both email and password.", {
-//             cause: "Missing credentials",
-//           });
-//         }
-
-//         // Connect to the database
-//         await connectToDatabase();
-
-//         const user = await User.findOne({ email }).select("+password");
-
-//         if (!user || !user.password) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "User not found or missing password",
-//           });
-//         }
-
-//         const isMatch = await compare(password, user.password);
-
-//         if (!isMatch) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "Password mismatch",
-//           });
-//         }
-
-//         return { name: user.name, email: user.email, id: user._id };
-//       },
-//     }),
-//   ],
-//   pages: {
-//     signIn: "/login", // Custom login page
-//   },
-//   callbacks: {
-//     async signIn({ user, account }) {
-//       if (account?.provider === "google") {
-//         try {
-//           const { email, name, image, id } = user;
-
-//           await connectToDatabase();
-
-//           const existingUser = await User.findOne({ email });
-
-//           if (!existingUser) {
-//             await User.create({ email, name, image, googleId: id });
-//           }
-//           return true; // Allow sign-in
-//         } catch (error) {
-//           throw new Error("Error while creating user");
-//         }
-//       }
-//       return true; // Allow sign-in for other providers
-//     },
-//   },
-//   debug: true, // Enables detailed logs for debugging
-// });
-
-// // Export the POST method explicitly
-// export { authHandler as POST };
-
-
-
-
-// import NextAuth from "next-auth";
-// import GoogleProvider from "next-auth/providers/google";
-// import CredentialsProvider from "next-auth/providers/credentials";
-// import { User } from "../../../models/userModel";
-// import { compare } from "bcryptjs";
-// import { connectToDatabase } from "../../../lib/utils";
-
-// // Custom error class if needed
-// class CredentialsSigninError extends Error {
-//   constructor(message: string, cause?: any) {
-//     super(message);
-//     this.name = "CredentialsSigninError";
-//     this.cause = cause;
-//   }
-// }
-
-// export default NextAuth({
-//   providers: [
-//     // GoogleProvider({
-//     //   clientId: process.env.GOOGLE_CLIENT_ID,
-//     //   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     // }),
-//     GoogleProvider({
-//       clientId: process.env.GOOGLE_CLIENT_ID!,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-//     }),
-    
-//     CredentialsProvider({
-//       name: "Credentials",
-//       credentials: {
-//         email: {
-//           label: "Email",
-//           type: "email",
-//         },
-//         password: { label: "Password", type: "password" },
-//       },
-//       authorize: async (credentials) => {
-//         const email = credentials?.email as string | undefined;
-//         const password = credentials?.password as string | undefined;
-
-//         if (!email || !password) {
-//           throw new CredentialsSigninError("Please provide both email and password.", {
-//             cause: "Missing credentials",
-//           });
-//         }
-
-//         // Connect to the database
-//         await connectToDatabase();
-
-//         const user = await User.findOne({ email }).select("+password");
-
-//         if (!user || !user.password) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "User not found or missing password",
-//           });
-//         }
-
-//         const isMatch = await compare(password, user.password);
-
-//         if (!isMatch) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "Password mismatch",
-//           });
-//         }
-
-//         return { name: user.name, email: user.email, id: user._id };
-//       },
-//     }),
-//   ],
-//   pages: {
-//     signIn: "/login", // Custom login page
-//   },
-//   callbacks: {
-//     async signIn({ user, account }) {
-//       if (account?.provider === "google") {
-//         try {
-//           const { email, name, image, id } = user;
-
-//           await connectToDatabase();
-
-//           const existingUser = await User.findOne({ email });
-
-//           if (!existingUser) {
-//             await User.create({ email, name, image, googleId: id });
-//           }
-//           return true; // Allow sign-in
-//         } catch (error) {
-//           throw new Error("Error while creating user");
-//         }
-//       }
-//       return true; // Allow sign-in for other providers
-//     },
-//   },
-//   debug: true, // Enables detailed logs for debugging
-// });
-
-
-
-// import NextAuth from "next-auth";
-// import GoogleProvider from "next-auth/providers/google";
-// import CredentialsProvider from "next-auth/providers/credentials";
-// import { User } from "./models/userModel";
-// import { compare } from "bcryptjs";
-// import { connectToDatabase } from "./lib/utils";
-
-// // Custom error class if needed
-// class CredentialsSigninError extends Error {
-//   constructor(message: string, cause?: any) {
-//     super(message);
-//     this.name = "CredentialsSigninError";
-//     this.cause = cause;
-//   }
-// }
-
-// export default NextAuth({
-//   providers: [
-//     GoogleProvider({
-//       clientId: process.env.GOOGLE_CLIENT_ID,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     }),
-//     CredentialsProvider({
-//       name: "Credentials",
-//       credentials: {
-//         email: {
-//           label: "Email",
-//           type: "email",
-//         },
-//         password: { label: "Password", type: "password" },
-//       },
-//       authorize: async (credentials) => {
-//         const email = credentials?.email as string | undefined;
-//         const password = credentials?.password as string | undefined;
-
-//         if (!email || !password) {
-//           throw new CredentialsSigninError("Please provide both email and password.", {
-//             cause: "Missing credentials",
-//           });
-//         }
-
-//         // Connect to the database
-//         await connectToDatabase();
-
-//         const user = await User.findOne({ email }).select("+password");
-
-//         if (!user || !user.password) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "User not found or missing password",
-//           });
-//         }
-
-//         const isMatch = await compare(password, user.password);
-
-//         if (!isMatch) {
-//           throw new CredentialsSigninError("Invalid Email or Password.", {
-//             cause: "Password mismatch",
-//           });
-//         }
-
-//         return { name: user.name, email: user.email, id: user._id };
-//       },
-//     }),
-//   ],
-//   pages: {
-//     signIn: "/login",
-//   },
-//   callbacks: {
-//     signIn: async ({ user, account }) => {
-//       if (account?.provider === "google") {
-//         try {
-//           const { email, name, image, id } = user;
-
-//           await connectToDatabase();
-
-//           const alreadyUser = await User.findOne({ email });
-
-//           if (!alreadyUser) {
-//             await User.create({ email, name, image, googleId: id });
-//           }
-//           return true; // Allow sign-in
-//         } catch (error) {
-//           throw new Error("Error while creating user");
-//         }
-//       }
-
-//       return true; // Allow sign-in for other providers
-//     },
-//   },
-// });
-
-
+export { handler as GET, handler as POST };
